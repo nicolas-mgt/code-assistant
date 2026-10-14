@@ -1,0 +1,12 @@
+{
+  "config-version": 8,
+  "server": {"host": "", "port": 8317},
+  "management": {"allow-remote": false, "secret-key": "", "disable-control-panel": true},
+  "access": {"api-keys": []},
+  "oauth": {"auth-dir": "/data/auth"},
+  "requests": {"streaming": {"keepalive-seconds": 15, "send-keepalive-before-ft": true}},
+  "observability": {
+    "logs": {"debug": false, "logging-to-file": false, "request-log": false, "error-logs-max-files": 1},
+    "usage": {"usage-statistics-enabled": false}
+  }
+}

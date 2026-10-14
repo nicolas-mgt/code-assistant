@@ -1,0 +1,42 @@
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+http://127.0.0.1:{$AI_GATEWAY_PORT:8318} {
+	bind 127.0.0.1
+	@models {
+		method GET
+		path /models
+	}
+	@chat {
+		method POST
+		path /chat/completions
+	}
+	@responses {
+		method POST
+		path /responses
+	}
+	route {
+		handle @models {
+			rewrite * /ca/m
+			reverse_proxy {$AI_GATEWAY_UPSTREAM:https://home.mmgt.dev} {
+				header_up Host {upstream_hostport}
+			}
+		}
+		handle @chat {
+			rewrite * /ca/c/c
+			reverse_proxy {$AI_GATEWAY_UPSTREAM:https://home.mmgt.dev} {
+				header_up Host {upstream_hostport}
+			}
+		}
+		handle @responses {
+			rewrite * /ca/r
+			reverse_proxy {$AI_GATEWAY_UPSTREAM:https://home.mmgt.dev} {
+				header_up Host {upstream_hostport}
+			}
+		}
+		respond 404
+	}
+}

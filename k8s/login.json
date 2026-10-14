@@ -1,0 +1,129 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "ai-login",
+    "namespace": "ai-gateway",
+    "labels": {
+      "app": "ai-login"
+    }
+  },
+  "spec": {
+    "restartPolicy": "Never",
+    "activeDeadlineSeconds": 1800,
+    "automountServiceAccountToken": false,
+    "imagePullSecrets": [
+      {
+        "name": "ghcr-pull"
+      }
+    ],
+    "containers": [
+      {
+        "name": "browser",
+        "image": "$LOGIN_IMAGE",
+        "ports": [
+          {
+            "name": "desktop",
+            "containerPort": 3000
+          }
+        ],
+        "env": [
+          {
+            "name": "PUID",
+            "value": "1000"
+          },
+          {
+            "name": "PGID",
+            "value": "1000"
+          },
+          {
+            "name": "TZ",
+            "value": "Europe/Warsaw"
+          },
+          {
+            "name": "CHROME_CLI",
+            "value": "https://auth.openai.com/codex/device"
+          },
+          {
+            "name": "SELKIES_ENABLE_CLIPBOARD",
+            "value": "false|locked"
+          },
+          {
+            "name": "SELKIES_ENABLE_BINARY_CLIPBOARD",
+            "value": "false|locked"
+          },
+          {
+            "name": "SELKIES_FILE_TRANSFERS",
+            "value": "none|locked"
+          },
+          {
+            "name": "SELKIES_AUDIO_ENABLED",
+            "value": "false|locked"
+          },
+          {
+            "name": "SELKIES_MICROPHONE_ENABLED",
+            "value": "false|locked"
+          },
+          {
+            "name": "SELKIES_WEBCAM_ENABLED",
+            "value": "false|locked"
+          },
+          {
+            "name": "SELKIES_GAMEPAD_ENABLED",
+            "value": "false|locked"
+          },
+          {
+            "name": "SELKIES_PRINTING_ENABLED",
+            "value": "false|locked"
+          },
+          {
+            "name": "SELKIES_COMMAND_ENABLED",
+            "value": "false|locked"
+          }
+        ],
+        "resources": {
+          "requests": {
+            "cpu": "250m",
+            "memory": "512Mi"
+          },
+          "limits": {
+            "cpu": "2",
+            "memory": "2Gi"
+          }
+        },
+        "readinessProbe": {
+          "tcpSocket": {
+            "port": "desktop"
+          },
+          "periodSeconds": 3
+        },
+        "volumeMounts": [
+          {
+            "name": "profile",
+            "mountPath": "/config"
+          },
+          {
+            "name": "shm",
+            "mountPath": "/dev/shm"
+          }
+        ]
+      }
+    ],
+    "volumes": [
+      {
+        "name": "profile",
+        "emptyDir": {
+          "medium": "Memory",
+          "sizeLimit": "512Mi"
+        }
+      },
+      {
+        "name": "shm",
+        "emptyDir": {
+          "medium": "Memory",
+          "sizeLimit": "1Gi"
+        }
+      }
+    ]
+  }
+}

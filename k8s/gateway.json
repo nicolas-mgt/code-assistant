@@ -1,0 +1,283 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "ai-gateway",
+        "namespace": "ai-gateway"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "ai-gateway"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "ai-gateway"
+            }
+          },
+          "spec": {
+            "automountServiceAccountToken": false,
+            "imagePullSecrets": [
+              {
+                "name": "ghcr-pull"
+              }
+            ],
+            "containers": [
+              {
+                "name": "gateway",
+                "image": "$GATEWAY_IMAGE",
+                "imagePullPolicy": "IfNotPresent",
+                "ports": [
+                  {
+                    "name": "http",
+                    "containerPort": 8317
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "100m",
+                    "memory": "128Mi"
+                  },
+                  "limits": {
+                    "cpu": "1",
+                    "memory": "512Mi"
+                  }
+                },
+                "startupProbe": {
+                  "tcpSocket": {
+                    "port": "http"
+                  },
+                  "periodSeconds": 2,
+                  "failureThreshold": 60
+                },
+                "readinessProbe": {
+                  "tcpSocket": {
+                    "port": "http"
+                  },
+                  "periodSeconds": 5
+                },
+                "livenessProbe": {
+                  "tcpSocket": {
+                    "port": "http"
+                  },
+                  "periodSeconds": 20,
+                  "failureThreshold": 3
+                },
+                "volumeMounts": [
+                  {
+                    "name": "config",
+                    "mountPath": "/etc/ai-gateway",
+                    "readOnly": true
+                  },
+                  {
+                    "name": "auth",
+                    "mountPath": "/data/auth"
+                  },
+                  {
+                    "name": "logs",
+                    "mountPath": "/CLIProxyAPI/logs"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "config",
+                "secret": {
+                  "secretName": "ai-gateway-config",
+                  "defaultMode": 256
+                }
+              },
+              {
+                "name": "auth",
+                "persistentVolumeClaim": {
+                  "claimName": "ai-gateway-auth"
+                }
+              },
+              {
+                "name": "logs",
+                "emptyDir": {
+                  "medium": "Memory",
+                  "sizeLimit": "32Mi"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "ai-gateway",
+        "namespace": "ai-gateway"
+      },
+      "spec": {
+        "type": "ClusterIP",
+        "selector": {
+          "app": "ai-gateway"
+        },
+        "ports": [
+          {
+            "name": "http",
+            "port": 8317,
+            "targetPort": "http"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "cert-manager.io/v1",
+      "kind": "Certificate",
+      "metadata": {
+        "name": "ai-gateway-tls",
+        "namespace": "ai-gateway"
+      },
+      "spec": {
+        "secretName": "ai-gateway-tls",
+        "dnsNames": [
+          "home.mmgt.dev"
+        ],
+        "issuerRef": {
+          "name": "letsencrypt-prod",
+          "kind": "ClusterIssuer"
+        }
+      }
+    },
+    {
+      "apiVersion": "traefik.io/v1alpha1",
+      "kind": "Middleware",
+      "metadata": {
+        "name": "ai-gateway-models",
+        "namespace": "ai-gateway"
+      },
+      "spec": {
+        "replacePath": {
+          "path": "/v1/models"
+        }
+      }
+    },
+    {
+      "apiVersion": "traefik.io/v1alpha1",
+      "kind": "Middleware",
+      "metadata": {
+        "name": "ai-gateway-chat",
+        "namespace": "ai-gateway"
+      },
+      "spec": {
+        "replacePath": {
+          "path": "/v1/chat/completions"
+        }
+      }
+    },
+    {
+      "apiVersion": "traefik.io/v1alpha1",
+      "kind": "Middleware",
+      "metadata": {
+        "name": "ai-gateway-responses",
+        "namespace": "ai-gateway"
+      },
+      "spec": {
+        "replacePath": {
+          "path": "/v1/responses"
+        }
+      }
+    },
+    {
+      "apiVersion": "traefik.io/v1alpha1",
+      "kind": "IngressRoute",
+      "metadata": {
+        "name": "ai-gateway",
+        "namespace": "ai-gateway"
+      },
+      "spec": {
+        "entryPoints": [
+          "websecure"
+        ],
+        "tls": {
+          "secretName": "ai-gateway-tls"
+        },
+        "routes": [
+          {
+            "kind": "Rule",
+            "match": "Host(`home.mmgt.dev`) && Path(`/ca/m`) && Method(`GET`)",
+            "priority": 150,
+            "middlewares": [
+              {
+                "name": "ai-gateway-models"
+              }
+            ],
+            "services": [
+              {
+                "name": "ai-gateway",
+                "port": 8317
+              }
+            ]
+          },
+          {
+            "kind": "Rule",
+            "match": "Host(`home.mmgt.dev`) && Path(`/ca/c/c`) && Method(`POST`)",
+            "priority": 150,
+            "middlewares": [
+              {
+                "name": "ai-gateway-chat"
+              }
+            ],
+            "services": [
+              {
+                "name": "ai-gateway",
+                "port": 8317
+              }
+            ]
+          },
+          {
+            "kind": "Rule",
+            "match": "Host(`home.mmgt.dev`) && Path(`/ca/r`) && Method(`POST`)",
+            "priority": 150,
+            "middlewares": [
+              {
+                "name": "ai-gateway-responses"
+              }
+            ],
+            "services": [
+              {
+                "name": "ai-gateway",
+                "port": 8317
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "ai-login-private",
+        "namespace": "ai-gateway"
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "app": "ai-login"
+          }
+        },
+        "policyTypes": [
+          "Ingress"
+        ],
+        "ingress": []
+      }
+    }
+  ]
+}
