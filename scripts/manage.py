@@ -226,7 +226,7 @@ def main():
             raise ValueError("Require 0 < OUTPUT < CONTEXT")
         client = {"name": "assistant", "display_name": "Assistant", "max_tokens": context,
                   "max_output_tokens": output, "capabilities": {"tools": True, "images": False,
-                  "parallel_tool_calls": True, "chat_completions": False}}
+                  "parallel_tool_calls": True, "prompt_cache_key": False, "chat_completions": False}}
         print(remote("configure", model=os.environ["MODEL"], client=client))
     elif action == "zed-config":
         model = json.loads(remote("client-model"))
