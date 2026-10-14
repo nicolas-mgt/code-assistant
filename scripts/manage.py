@@ -84,7 +84,7 @@ def push():
     images = {}
     for key, package in [("GATEWAY_IMAGE", "code-assistant"), ("LOGIN_IMAGE", "code-assistant-login")]:
         tag = f"{REGISTRY}{package}:{revision}"
-        run(["docker", "push", tag])
+        run(["docker", "push", "--quiet", tag])
         result = run(["docker", "buildx", "imagetools", "inspect", tag], capture_output=True).stdout
         digest = re.search(r"^Digest:\s+(sha256:[a-f0-9]{64})$", result, re.MULTILINE)
         if not digest:
