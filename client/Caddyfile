@@ -4,8 +4,7 @@
 	persist_config off
 }
 
-http://127.0.0.1:{$AI_GATEWAY_PORT:8318} {
-	bind 127.0.0.1
+(gateway_routes) {
 	@models {
 		method GET
 		path /models
@@ -18,25 +17,39 @@ http://127.0.0.1:{$AI_GATEWAY_PORT:8318} {
 		method POST
 		path /responses
 	}
-	route {
-		handle @models {
-			rewrite * /ca/m
-			reverse_proxy {$AI_GATEWAY_UPSTREAM:https://home.mmgt.dev} {
-				header_up Host {upstream_hostport}
-			}
-		}
-		handle @chat {
-			rewrite * /ca/c/c
-			reverse_proxy {$AI_GATEWAY_UPSTREAM:https://home.mmgt.dev} {
-				header_up Host {upstream_hostport}
-			}
-		}
-		handle @responses {
-			rewrite * /ca/r
-			reverse_proxy {$AI_GATEWAY_UPSTREAM:https://home.mmgt.dev} {
-				header_up Host {upstream_hostport}
-			}
-		}
+	handle @models {
+		rewrite * /ca/m
+	}
+	handle @chat {
+		rewrite * /ca/c/c
+	}
+	handle @responses {
+		rewrite * /ca/r
+	}
+	handle {
 		respond 404
+	}
+}
+
+http://127.0.0.1:{$AI_GATEWAY_PORT:8318} {
+	bind 127.0.0.1
+	route {
+		import gateway_routes
+		reverse_proxy {$AI_GATEWAY_UPSTREAM:https://home.mmgt.dev} {
+			header_up Host home.mmgt.dev
+		}
+	}
+}
+
+http://127.0.0.1:{$AI_GATEWAY_NETWORK_PORT:8319} {
+	bind 127.0.0.1
+	route {
+		import gateway_routes
+		reverse_proxy https://192.168.1.150 {
+			header_up Host home.mmgt.dev
+			transport http {
+				tls_server_name home.mmgt.dev
+			}
+		}
 	}
 }

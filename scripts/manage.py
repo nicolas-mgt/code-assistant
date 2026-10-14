@@ -212,7 +212,8 @@ def main():
         deploy()
     elif action == "client":
         env = os.environ.copy()
-        env.update(AI_GATEWAY_UPSTREAM="https://home.mmgt.dev", AI_GATEWAY_PORT="8318")
+        env.update(AI_GATEWAY_UPSTREAM="https://home.mmgt.dev", AI_GATEWAY_PORT="8318",
+                   AI_GATEWAY_NETWORK_PORT="8319")
         run(["caddy", "run", "--config", "client/Caddyfile", "--adapter", "caddyfile"], env=env)
     elif action == "login":
         login()
@@ -224,15 +225,20 @@ def main():
         context, output = int(os.environ["CONTEXT"]), int(os.environ["OUTPUT"])
         if not 0 < output < context:
             raise ValueError("Require 0 < OUTPUT < CONTEXT")
-        client = {"name": "assistant", "display_name": "Assistant", "max_tokens": context,
+        client = {"name": "assistant", "display_name": "Assistant", "reasoning_effort": "high", "max_tokens": context,
                   "max_output_tokens": output, "capabilities": {"tools": True, "images": False,
                   "parallel_tool_calls": True, "prompt_cache_key": False, "chat_completions": False}}
         print(remote("configure", model=os.environ["MODEL"], client=client))
     elif action == "zed-config":
         model = json.loads(remote("client-model"))
-        settings = {"language_models": {"openai_compatible": {"AI Gateway": {
-            "api_url": "http://127.0.0.1:8318", "available_models": [model]}}},
-            "agent": {"default_model": {"provider": "AI Gateway", "model": "assistant"}}}
+        providers = {}
+        for mode, port in [("Network", 8319), ("Remote", 8318)]:
+            providers[f"AI Gateway {mode}"] = {
+                "api_url": f"http://127.0.0.1:{port}",
+                "available_models": [dict(model, display_name=f"assistant-{mode.lower()}", reasoning_effort="high")]}
+        settings = {"language_models": {"openai_compatible": providers},
+            "agent": {"default_model": {"provider": "AI Gateway Network", "model": "assistant",
+                                        "enable_thinking": True, "effort": "high"}}}
         print(json.dumps(settings, indent=2))
     elif action == "key-copy":
         run(["pbcopy"], input=remote("key"))

@@ -41,7 +41,7 @@ class Backend(BaseHTTPRequestHandler):
         else:
             self.wfile.write(json.dumps({"path": self.path, "method": self.command,
                 "body": body.decode(), "authorization": self.headers.get("Authorization"),
-                "content_type": self.headers.get("Content-Type")}).encode())
+                "content_type": self.headers.get("Content-Type"), "host": self.headers.get("Host")}).encode())
 
 
 class ProxyTests(unittest.TestCase):
@@ -55,8 +55,11 @@ class ProxyTests(unittest.TestCase):
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             cls.port = sock.getsockname()[1]
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            network_port = sock.getsockname()[1]
         env = dict(os.environ, AI_GATEWAY_UPSTREAM=f"http://127.0.0.1:{cls.backend.server_port}",
-                   AI_GATEWAY_PORT=str(cls.port))
+                   AI_GATEWAY_PORT=str(cls.port), AI_GATEWAY_NETWORK_PORT=str(network_port))
         cls.log = tempfile.TemporaryFile()
         cls.proxy = subprocess.Popen(["caddy", "run", "--config", str(ROOT / "client/Caddyfile"),
                                       "--adapter", "caddyfile"], env=env, stdout=cls.log, stderr=cls.log)
@@ -97,7 +100,31 @@ class ProxyTests(unittest.TestCase):
                 self.assertEqual(echoed["body"], body or "")
                 self.assertEqual(echoed["authorization"], "Bearer test-gateway-key")
                 self.assertEqual(echoed["content_type"], "application/json")
+                self.assertEqual(echoed["host"], "home.mmgt.dev")
                 conn.close()
+
+    def test_network_uses_lan_address_with_verified_domain_certificate(self):
+        config = json.loads(subprocess.check_output(
+            ["caddy", "adapt", "--config", str(ROOT / "client/Caddyfile"), "--adapter", "caddyfile"],
+            text=True, stderr=subprocess.DEVNULL))
+        server = next(server for server in config["apps"]["http"]["servers"].values()
+                      if "127.0.0.1:8319" in server["listen"])
+
+        def handlers(value):
+            if isinstance(value, dict):
+                if value.get("handler") == "reverse_proxy":
+                    yield value
+                for child in value.values():
+                    yield from handlers(child)
+            elif isinstance(value, list):
+                for child in value:
+                    yield from handlers(child)
+
+        proxy, = handlers(server)
+        self.assertEqual(proxy["upstreams"], [{"dial": "192.168.1.150:443"}])
+        self.assertEqual(proxy["transport"]["tls"]["server_name"], "home.mmgt.dev")
+        self.assertFalse(proxy["transport"]["tls"].get("insecure_skip_verify", False))
+        self.assertEqual(proxy["headers"]["request"]["set"]["Host"], ["home.mmgt.dev"])
 
     def test_unknown_paths_and_methods_are_not_forwarded(self):
         before = len(self.backend.requests)
