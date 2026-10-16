@@ -226,9 +226,10 @@ def main():
         if not 0 < output < context:
             raise ValueError("Require 0 < OUTPUT < CONTEXT")
         client = {"name": "assistant", "display_name": "Assistant", "reasoning_effort": "high", "max_tokens": context,
-                  "max_output_tokens": output, "capabilities": {"tools": True, "images": False,
+                  "max_output_tokens": output, "capabilities": {"tools": True, "images": True,
                   "parallel_tool_calls": True, "prompt_cache_key": False, "chat_completions": False}}
-        print(remote("configure", model=os.environ["MODEL"], client=client))
+        payload_rules = json.loads((ROOT / "config/gateway.json").read_text())["requests"]["payload"]
+        print(remote("configure", model=os.environ["MODEL"], client=client, payload_rules=payload_rules))
     elif action == "zed-config":
         model = json.loads(remote("client-model"))
         providers = {}

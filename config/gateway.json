@@ -4,7 +4,23 @@
   "management": {"allow-remote": false, "secret-key": "", "disable-control-panel": true},
   "access": {"api-keys": []},
   "oauth": {"auth-dir": "/data/auth"},
-  "requests": {"streaming": {"keepalive-seconds": 15, "send-keepalive-before-ft": true}},
+  "requests": {
+    "streaming": {"keepalive-seconds": 15, "send-keepalive-before-ft": true},
+    "payload": {
+      "override": [
+        {
+          "models": [
+            {
+              "name": "gpt-6-astra",
+              "protocol": "codex",
+              "match": [{"reasoning.effort": "none"}]
+            }
+          ],
+          "params": {"reasoning.effort": "low"}
+        }
+      ]
+    }
+  },
   "observability": {
     "logs": {"debug": false, "logging-to-file": false, "request-log": false, "error-logs-max-files": 1},
     "usage": {"usage-statistics-enabled": false}

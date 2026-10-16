@@ -87,6 +87,7 @@ def configure(request):
     value["oauth"]["model-alias"] = {"codex": [
         {"name": model, "alias": "assistant", "fork": False, "force-mapping": True}
     ]}
+    value.setdefault("requests", {})["payload"] = request["payload_rules"]
     save_config(value)
     client = {"apiVersion": "v1", "kind": "ConfigMap", "metadata": {"name": "ai-gateway-client", "namespace": NAMESPACE},
               "data": {"model.json": json.dumps(request["client"])}}
