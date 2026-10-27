@@ -22,12 +22,14 @@ Zed Agent / assistant-network
   └─ http://127.0.0.1:8319 ── Caddy ── HTTPS LAN ──┐
                                                  │
 Zed Agent / assistant-remote                      ├─ Traefik /ca/…
-  └─ http://127.0.0.1:8318 ── Caddy ── HTTPS DNS ──┘    └─ CLIProxyAPI
+  └─ http://127.0.0.1:8318 ── Caddy ── HTTPS DNS ──┘    └─ request-guard → CLIProxyAPI
                                                             ├─ OpenAI / ChatGPT
                                                             └─ OAuth na PVC
 ```
 
 Pliki projektu, terminal, narzędzia programistyczne i wykonywanie poleceń pozostają na Macu. Treść potrzebna modelowi, np. prompt i odczytane fragmenty plików, jest przesyłana przez bramkę do dostawcy. Przeglądarka logowania, sesja ChatGPT i tokeny OAuth znajdują się na serwerze.
+
+Serwerowy `request-guard` skraca wyłącznie tekstowe wyniki narzędzi przekraczające 10 MiB: zachowuje po 128 KiB początku i końca oraz dodaje informację o pominiętej części. Dotyczy to `function_call_output.output` w Responses oraz treści wiadomości `tool` w Chat Completions. Historia zapisana w Zedzie pozostaje bez zmian. Filtr działa jako dodatkowy kontener w podzie bramki, z tego samego obrazu; jego kompilacja i testy odbywają się podczas budowania obrazu Dockerem.
 
 Na Macu **nie trzeba instalować aplikacji ChatGPT ani lokalnego procesu Codex**. W Zedzie korzystamy z **Zed Agent**, nie z zewnętrznego agenta o nazwie Codex.
 

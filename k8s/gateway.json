@@ -88,6 +88,43 @@
                     "mountPath": "/CLIProxyAPI/logs"
                   }
                 ]
+              },
+              {
+                "name": "request-guard",
+                "image": "$GATEWAY_IMAGE",
+                "imagePullPolicy": "IfNotPresent",
+                "command": [
+                  "/usr/local/bin/request-guard"
+                ],
+                "ports": [
+                  {
+                    "name": "guard",
+                    "containerPort": 8318
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "50m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "cpu": "1",
+                    "memory": "512Mi"
+                  }
+                },
+                "readinessProbe": {
+                  "tcpSocket": {
+                    "port": "guard"
+                  },
+                  "periodSeconds": 5
+                },
+                "livenessProbe": {
+                  "tcpSocket": {
+                    "port": "guard"
+                  },
+                  "periodSeconds": 20,
+                  "failureThreshold": 3
+                }
               }
             ],
             "volumes": [
@@ -132,7 +169,7 @@
           {
             "name": "http",
             "port": 8317,
-            "targetPort": "http"
+            "targetPort": "guard"
           }
         ]
       }

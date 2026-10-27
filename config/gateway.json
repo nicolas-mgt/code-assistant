@@ -4,6 +4,10 @@
   "management": {"allow-remote": false, "secret-key": "", "disable-control-panel": true},
   "access": {"api-keys": []},
   "oauth": {"auth-dir": "/data/auth"},
+  "routing": {
+    "cooldown": {"disable-cooling": true},
+    "retry": {"request-retry": 0}
+  },
   "requests": {
     "streaming": {"keepalive-seconds": 15, "send-keepalive-before-ft": true},
     "payload": {
